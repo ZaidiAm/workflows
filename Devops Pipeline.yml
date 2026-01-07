@@ -1,0 +1,10 @@
+Version: 1.2
+Active status: true
+Contributors:
+ - Name: Foulen
+   Role: Developer
+ - Name: Foulana
+   Role: Tester
+Description: |
+ "This project automates the build
+  and deployment process."
