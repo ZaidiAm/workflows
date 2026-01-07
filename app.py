@@ -1,3 +1,2 @@
-def add(a, b):
-    return a + b
-    
+def test_deliberate_failure():
+    assert 2 + 2 == 5  # ❌ This will fail
