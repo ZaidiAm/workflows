@@ -27,45 +27,62 @@ jobs:
       - name: Run tests with XML & HTML reports
         run: |
           mkdir -p reports
-          pytest tests/ \
-            --junitxml=reports/test-results.xml \
-            --html=reports/report.html \
-            --self-contained-html
-        continue-on-error: true
+          pytest tests/ --junitxml=reports/test-results.xml --html=reports/report.html --self-contained-html
 
       - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-reports
           path: reports/
 
-      # 📧 EMAIL NOTIFICATION
-      - name: Send email notification
-        if: always()
-        uses: dawidd6/action-send-mail@v3
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test  # ✅ ce job s'exécute seulement si 'test' réussit
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy application
+        run: |
+          ENV=${{ github.event.inputs.env || 'staging' }}
+          echo "Deploying application to $ENV..."
+  notify:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()   # s’exécute même si les tests échouent
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download test reports
+        uses: actions/download-artifact@v5
+        with:
+          name: test-reports
+          path: reports
+
+      - name: Send email with test report
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
-          server_port: 587
+          server_port: 465
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_PASSWORD }}
-          subject: GitHub CI – Python Tests Results
-          to:  zeidiamira@gmail.com
+ 
+
+          subject: >
+            [${{ needs.test.result }}] ${{ github.repository }}
+
+          from: zeidiamira@gmail.com
+          to: ouelhazifir@gmail.com
           cc: chokri.gammoudi@gmail.com
-          from: GitHub Actions
+ 
+
           body: |
-            Hello 👋,
-
-            The Python tests workflow has completed.
-
+           
+          
             Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Status: ${{ job.status }}
-
-            Test reports are available in GitHub Actions artifacts.
-
-            Regards,
-            GitHub Actions 🤖
-            attachments: reports/report.html
-
+            Job status: ${{ needs.test.result }}
+            Commit SHA: ${{ github.sha }}
+            
+          
+          attachments: reports/report.html
